@@ -1,5 +1,11 @@
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.ini4j.InvalidFileFormatException;
+import org.ini4j.Wini;
+import org.ini4j.Profile.Section;
 
 /**
  * Created by Yuri Meiburg on 30-4-2015.
@@ -19,21 +25,67 @@ public class Main {
     public static List<Character> fPassword = new ArrayList<Character>();
     public static String hostname, username;
 
-    public static void main(String [] args){
-        if (args.length != 3) {
-            System.exit(0);
-        }
+    public static void main(String[] args) throws InvalidFileFormatException, IOException {
 
-        hostname = args[0];
-        username = args[1];
 
-        for( int i=0; i< args[2].length(); ++i){
-            fPassword.add((char) Integer.parseInt(""+args[2].charAt(i),16));
-        }
 
-        System.out.println("username = " + username);
-        System.out.println("hostname = " + hostname);
-        System.out.println("getPassword() = " + getPassword());
+        // TODO CarmelonHaldon: ...
+        // if (args.length != 3) {
+        //     System.exit(0);
+        // }
+
+        // hostname = args[0];
+        // username = args[1];
+
+        // for( int i=0; i< args[2].length(); ++i){
+        //     fPassword.add((char) Integer.parseInt(""+args[2].charAt(i),16));
+        // }
+
+        // System.out.println("username = " + username);
+        // System.out.println("hostname = " + hostname);
+        // System.out.println("getPassword() = " + getPassword());
+
+        Wini wini = new Wini(new File(args[0]));
+
+		Section sessions = wini.get("Sessions");
+
+		System.out.println("session,username,password");
+
+		for (String childrenName : sessions.childrenNames()) {
+
+            Section session = sessions.getChild(childrenName);
+
+            String isWorkspace = session.get("IsWorkspace");
+
+            // TODO CarmelonHaldon: Un StringUtils...
+            if (isWorkspace != null) {
+                continue;
+            }
+
+            username = session.get("UserName");
+			hostname = session.get("HostName");
+			String password = session.get("Password");
+
+			fPassword = new ArrayList<Character>();
+
+			for (int i = 0; i < password.length(); ++i) {
+				fPassword.add((char) Integer.parseInt("" + password.charAt(i), 16));
+			}
+
+			String decryptPassword = getPassword();
+
+            // TODO CarmelonHaldon: También HostName??
+			StringBuffer stringBuffer = new StringBuffer();
+
+			stringBuffer.append(childrenName);
+			stringBuffer.append(",");
+			stringBuffer.append(username);
+			stringBuffer.append(",");
+			// System.out.println("hostname = " + hostname);
+			stringBuffer.append(decryptPassword);
+
+			System.out.println(stringBuffer.toString());
+		}
     }
 
 
@@ -74,29 +126,29 @@ public class Main {
      *}
      */
     static String decryptPassword(List<Character> password, String unicodeKey){
-        System.out.println("unicodeKey = " + unicodeKey);
+        // System.out.println("unicodeKey = " + unicodeKey);
         String key = unicodeKey;
         String result = "";
         char length, flag;
 
         flag = simpleDecryptNextChar(password);
-        System.out.println("flag = " + (int) flag);
+        // System.out.println("flag = " + (int) flag);
         if(flag == PWALG_SIMPLE_FLAG){
             /* Dummy = */ simpleDecryptNextChar(password);
             length = simpleDecryptNextChar(password);
         }
         else length = flag;
 
-        System.out.println("length = " + (int) length);
+        // System.out.println("length = " + (int) length);
 
         int newStart = ((int)simpleDecryptNextChar(password)*2);
-        System.out.println("newStart = " + newStart + ", password.size() = " + password.size());
+        // System.out.println("newStart = " + newStart + ", password.size() = " + password.size());
         removeItems(password, 0, newStart);
 
         for(int index=0; index < length; ++index)
             result += simpleDecryptNextChar(password);
 
-        System.out.println("result = " + result);
+        // System.out.println("result = " + result);
         if(flag == PWALG_SIMPLE_FLAG)
         {
             if (!result.substring(0, key.length()).equals(key)) result = "";
